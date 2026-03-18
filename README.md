@@ -127,6 +127,8 @@ pip install -e .[base]
 pip install --no-build-isolation flash-attn==2.7.1.post4 
 ```
 
+For DGX Spark, simply follow the [docker instructions below](#dgx-spark-deployment).
+
 ## Getting started with this repo
 
 We provide accessible Jupyter notebooks and detailed documentation in the [`./getting_started`](./getting_started) folder. Utility scripts can be found in the [`./scripts`](./scripts) folder. Additionally, a comprehensive tutorial for finetuning the model on the SO-101 robot is available on [HuggingFace](https://huggingface.co/blog/nvidia/gr00t-n1-5-so101-tuning).
@@ -135,12 +137,12 @@ We provide accessible Jupyter notebooks and detailed documentation in the [`./ge
 
 Download the model checkpoint and run the inference service.
 ```bash
-python scripts/inference_service.py --model-path nvidia/GR00T-N1.5-3B --server
+python3 scripts/inference_service.py --model-path nvidia/GR00T-N1.5-3B --server
 ```
 
 On a different terminal, run the client mode to send requests to the server. This will send a random observation to the server and get an action back.
 ```bash
-python scripts/inference_service.py  --client
+python3 scripts/inference_service.py  --client
 ```
 
 ## 1. Data Format & Loading
@@ -324,6 +326,39 @@ Model latency measured by `trtexec` with batch_size=1.
 | VLM - LLM                                      | 8.53                           | 5.81                              |
       
 **Note**: The module latency (e.g., DiT Block) in pipeline is slightly longer than the model latency in benchmark table above because the module (e.g., Action_Head - DiT) latency not only includes the model latency in table above but also accounts for the overhead of data transfer from PyTorch to TRT and returning from TRT to PyTorch.
+
+## DGX Spark Deployment
+
+GR00T N1.5 can run on DGX Spark (aarch64 SBSA, NVIDIA GB10 Blackwell iGPU, CUDA 13).
+A Dockerfile is provided that handles all platform-specific dependencies.
+
+```bash
+docker build -f spark.Dockerfile -t gr00t:n1.5-spark .
+```
+
+Run interactive:
+
+```bash
+docker run --rm -it --gpus all \
+  --ipc=host \
+  --ulimit memlock=-1 \
+  --ulimit stack=67108864 \
+  --network host \
+  -v "$(pwd)":/workspace/repo \
+  -v "${HOME}/.cache/huggingface":/root/.cache/huggingface \
+  -w /workspace/repo \
+  -e HF_TOKEN="${HF_TOKEN:-}" \
+  gr00t:n1.5-spark
+```
+
+and the follow [quick start guide](#0-quick-start).
+
+### Notes
+- Uses Python 3.10, PyTorch 2.10+cu130, and a [prebuilt flash-attn wheel](https://github.com/mjun0812/flash-attention-prebuild-wheels) for aarch64
+- Video decoding uses `decord2` (aarch64-compatible drop-in for `decord`)
+- Always pass `--video-backend torchvision_av` when running finetuning or inference
+- The sm_121 capability warning from PyTorch is expected and can be safely ignored
+- See also: [community guide](https://github.com/NVIDIA/Isaac-GR00T/issues/474)
 
 # FAQ
 
