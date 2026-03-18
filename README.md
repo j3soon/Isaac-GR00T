@@ -353,6 +353,37 @@ docker run --rm -it --gpus all \
 
 and the follow [quick start guide](#0-quick-start).
 
+A variant with [Intel RealSense SDK](https://github.com/IntelRealSense/librealsense) (v2.56.4) pre-built is also available:
+
+```bash
+docker build -f spark-realsense.Dockerfile -t gr00t:n1.5-spark-realsense .
+```
+
+and run interactive:
+
+```bash
+xhost +local:docker
+docker run --rm -it --gpus all \
+  --ipc=host \
+  --ulimit memlock=-1 \
+  --ulimit stack=67108864 \
+  --network host \
+  -v "$(pwd)":/workspace/repo \
+  -v "${HOME}/.cache/huggingface":/root/.cache/huggingface \
+  -w /workspace/repo \
+  -e HF_TOKEN="${HF_TOKEN:-}" \
+  -e DISPLAY \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  -v $HOME/.Xauthority:/root/.Xauthority \
+  --privileged \
+  -v /dev:/dev \
+  gr00t:n1.5-spark-realsense
+```
+
+The additional docker flags are for (1) X11 GUI and (2) real camera communication.
+
+> `realsense-viewer` seems to have some GUI misalignment on DGX Spark, but the image capture works well.
+
 ### Notes
 - Uses Python 3.10, PyTorch 2.10+cu130, and a [prebuilt flash-attn wheel](https://github.com/mjun0812/flash-attention-prebuild-wheels) for aarch64
 - Video decoding uses `decord2` (aarch64-compatible drop-in for `decord`)

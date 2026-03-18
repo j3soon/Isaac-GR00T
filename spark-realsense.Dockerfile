@@ -131,4 +131,62 @@ ENV LD_LIBRARY_PATH="/usr/local/lib/python3.10/dist-packages/torch/lib:/usr/loca
 # Note: Use --video-backend torchvision_av when running finetuning/inference
 # Example: python scripts/gr00t_finetune.py --video-backend torchvision_av
 
+# =================
+# | RealSense SDK |
+# =================
+
+# Ref: https://github.com/j3soon/ros2-essentials/blob/1f19d7d2a4b71a051fc96ba577df291732e0e655/docker_modules/install_realsense.sh
+# Ref: https://github.com/realsenseai/librealsense/blob/78cb605b11f5ba80176e7b8d70292f76ba625565/scripts/Docker/Dockerfile
+ARG LIBRS_VERSION=2.56.4
+
+RUN apt-get update && \
+    apt-get install -qq -y --no-install-recommends \
+      build-essential cmake git \
+      libssl-dev libusb-1.0-0-dev pkg-config \
+      libgtk-3-dev libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev \
+      libidn2-dev \
+      curl python3 python3-dev ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN cd /usr/src && \
+    curl "https://codeload.github.com/realsenseai/librealsense/tar.gz/refs/tags/v${LIBRS_VERSION}" -o librealsense.tar.gz && \
+    tar -zxf librealsense.tar.gz && \
+    rm librealsense.tar.gz && \
+    ln -s "/usr/src/librealsense-${LIBRS_VERSION}" /usr/src/librealsense
+
+# librealsense v2.56.4 examples unconditionally link OpenGL::GL on Linux, but
+# Ubuntu 22.04 with GLVND may only expose OpenGL::OpenGL and OpenGL::GLX.
+# Add the legacy compatibility target before configuring so examples can build.
+RUN cd /usr/src/librealsense && \
+    sed -i '/# Check the platform and conditionally link OpenGL and libdl (for linux)/i \\nfind_package(OpenGL REQUIRED)\nif(NOT TARGET OpenGL::GL)\n    if(TARGET OpenGL::OpenGL AND TARGET OpenGL::GLX)\n        add_library(OpenGL::GL INTERFACE IMPORTED)\n        set_property(TARGET OpenGL::GL PROPERTY INTERFACE_LINK_LIBRARIES "OpenGL::OpenGL;OpenGL::GLX")\n    elseif(TARGET OpenGL::OpenGL)\n        add_library(OpenGL::GL INTERFACE IMPORTED)\n        set_property(TARGET OpenGL::GL PROPERTY INTERFACE_LINK_LIBRARIES OpenGL::OpenGL)\n    endif()\nendif()\n' examples/CMakeLists.txt
+
+# Build librealsense with RSUSB backend (no dkms/kernel module needed)
+# Ref: https://github.com/realsenseai/librealsense/issues/9931#issuecomment-964289692
+# Ref: https://github.com/NVIDIA-ISAAC-ROS/isaac-ros-cli/blob/c9666b71e301967d505ad118a45c0aa89f5d72bd/docker/Dockerfile.realsense#L20
+# libidn2: the vendored static libcurl references idn2 symbols but the
+# upstream cmake doesn't link it. We patch the generated link.txt files
+# after cmake to append -lidn2 at the end of the link line.
+RUN cd /usr/src/librealsense && mkdir build && cd build && \
+    cmake \
+      -DCMAKE_C_FLAGS_RELEASE="${CMAKE_C_FLAGS_RELEASE} -s" \
+      -DCMAKE_CXX_FLAGS_RELEASE="${CMAKE_CXX_FLAGS_RELEASE} -s" \
+      -DCMAKE_INSTALL_PREFIX=/opt/librealsense \
+      -DFORCE_RSUSB_BACKEND=TRUE \
+      -DBUILD_PYTHON_BINDINGS:bool=true \
+      -DCMAKE_BUILD_TYPE=Release .. && \
+    find . -name link.txt -exec grep -l libcurl {} \; | xargs -I{} sed -i 's/$/ -lidn2/' {} && \
+    make -j"$(($(nproc)-1))" all && \
+    make install
+
+RUN cp -a /opt/librealsense/. /usr/local/ && \
+    mkdir -p /etc/udev/rules.d && \
+    cp /usr/src/librealsense/config/99-realsense-libusb.rules /etc/udev/rules.d/ && \
+    cp /usr/src/librealsense/config/99-realsense-d4xx-mipi-dfu.rules /etc/udev/rules.d/
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      libusb-1.0-0 udev apt-transport-https \
+      ca-certificates curl software-properties-common && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /workspace
