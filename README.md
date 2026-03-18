@@ -384,6 +384,12 @@ The additional docker flags are for (1) X11 GUI and (2) real camera communicatio
 
 > `realsense-viewer` seems to have some GUI misalignment on DGX Spark, but the image capture works well.
 
+A further variant adds [LeRobot](https://github.com/huggingface/lerobot) with Feetech servo support for the SO-101 arm:
+
+```bash
+docker build -f spark-realsense-so101.Dockerfile -t gr00t:n1.5-spark-realsense-so101 .
+```
+
 ### Notes
 - Uses Python 3.10, PyTorch 2.10+cu130, and a [prebuilt flash-attn wheel](https://github.com/mjun0812/flash-attention-prebuild-wheels) for aarch64
 - Video decoding uses `decord2` (aarch64-compatible drop-in for `decord`)
