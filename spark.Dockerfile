@@ -102,8 +102,8 @@ RUN pip install --no-cache-dir \
       "pyzmq" \
       "gpustat"
 
-# ── decord2 (aarch64 drop-in replacement for decord) ───────────────────────
-RUN pip install --no-cache-dir decord2
+# ── decord2 + HTTP server deps (aarch64 replacement + eval server runtime) ──
+RUN pip install --no-cache-dir decord2 json-numpy uvicorn fastapi
 
 # ── flash-attn (prebuilt community wheel for aarch64 + cu130 + torch2.9) ───
 # Source: https://github.com/mjun0812/flash-attention-prebuild-wheels

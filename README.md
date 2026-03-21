@@ -331,9 +331,16 @@ Model latency measured by `trtexec` with batch_size=1.
 
 GR00T N1.5 can run on DGX Spark (aarch64 SBSA, NVIDIA GB10 Blackwell iGPU, CUDA 13).
 A Dockerfile is provided that handles all platform-specific dependencies.
+If you do not want to build locally, you can also pull the prebuilt images from Docker Hub:
 
 ```bash
-docker build -f spark.Dockerfile -t gr00t:n1.5-spark .
+docker pull j3soon/gr00t:n1.5-spark
+docker pull j3soon/gr00t:n1.5-spark-realsense
+docker pull j3soon/gr00t:n1.5-spark-realsense-so101
+```
+
+```bash
+docker build -f spark.Dockerfile -t j3soon/gr00t:n1.5-spark .
 ```
 
 Run interactive:
@@ -348,7 +355,7 @@ docker run --rm -it --gpus all \
   -v "${HOME}/.cache/huggingface":/root/.cache/huggingface \
   -w /workspace/repo \
   -e HF_TOKEN="${HF_TOKEN:-}" \
-  gr00t:n1.5-spark
+  j3soon/gr00t:n1.5-spark
 ```
 
 and the follow [quick start guide](#0-quick-start).
@@ -356,7 +363,7 @@ and the follow [quick start guide](#0-quick-start).
 A variant with [Intel RealSense SDK](https://github.com/IntelRealSense/librealsense) (v2.56.4) pre-built is also available:
 
 ```bash
-docker build -f spark-realsense.Dockerfile -t gr00t:n1.5-spark-realsense .
+docker build -f spark-realsense.Dockerfile -t j3soon/gr00t:n1.5-spark-realsense .
 ```
 
 and run interactive:
@@ -377,7 +384,7 @@ docker run --rm -it --gpus all \
   -v $HOME/.Xauthority:/root/.Xauthority \
   --privileged \
   -v /dev:/dev \
-  gr00t:n1.5-spark-realsense
+  j3soon/gr00t:n1.5-spark-realsense
 ```
 
 The additional docker flags are for (1) X11 GUI and (2) real camera communication.
@@ -387,7 +394,7 @@ The additional docker flags are for (1) X11 GUI and (2) real camera communicatio
 A further variant adds [LeRobot](https://github.com/huggingface/lerobot) with Feetech servo support for the SO-101 arm:
 
 ```bash
-docker build -f spark-realsense-so101.Dockerfile -t gr00t:n1.5-spark-realsense-so101 .
+docker build -f spark-realsense-so101.Dockerfile -t j3soon/gr00t:n1.5-spark-realsense-so101 .
 ```
 
 ### Notes
